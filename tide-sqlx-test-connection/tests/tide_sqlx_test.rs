@@ -43,7 +43,7 @@ async fn insert(req: tide::Request<()>) -> tide::Result {
 }
 
 async fn database_integration_test(within_transaction: bool) -> tide::Result<()> {
-    dotenv::dotenv().unwrap();
+    dotenv::dotenv().ok();
 
     let db_url = std::env::var("DATABASE_URL")?;
     let connection = DbConnection::connect(&db_url).await?;
