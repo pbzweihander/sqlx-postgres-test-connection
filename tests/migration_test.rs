@@ -61,14 +61,14 @@ async fn migration_test(within_transaction: bool) -> anyhow::Result<()> {
     Ok(())
 }
 
-#[sqlx::sqlx_macros::test]
+#[test]
 #[serial_test::serial]
-async fn test_within_transaction() {
-    migration_test(true).await.unwrap();
+fn test_within_transaction() {
+    sqlx_rt::block_on(migration_test(true)).unwrap();
 }
 
-#[sqlx::sqlx_macros::test]
+#[test]
 #[serial_test::serial]
-async fn test_without_transaction() {
-    migration_test(false).await.unwrap();
+fn test_without_transaction() {
+    sqlx_rt::block_on(migration_test(false)).unwrap();
 }
