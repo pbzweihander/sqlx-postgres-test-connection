@@ -1,0 +1,33 @@
+[workspace]
+members = [".", "tide-sqlx-test-connection"]
+
+[package]
+name = "sqlx-test-connection"
+description = "Database test helper for sqlx. Inspired by https://github.com/spoqa/ormeasy"
+version = "0.1.0"
+authors = ["Spoqa Creators <dev@spoqa.com>"]
+edition = "2018"
+homepage = "https://github.com/spoqa/sqlx-test-connection"
+repository = "https://github.com/spoqa/sqlx-test-connection"
+readme = "README.md"
+license = "MIT"
+
+[features]
+runtime-actix-native-tls = ["sqlx/runtime-actix-native-tls"]
+runtime-async-std-native-tls = ["sqlx/runtime-async-std-native-tls"]
+runtime-tokio-native-tls = ["sqlx/runtime-tokio-native-tls"]
+
+runtime-actix-rustls = ["sqlx/runtime-actix-rustls"]
+runtime-async-std-rustls = ["sqlx/runtime-async-std-rustls"]
+runtime-tokio-rustls = ["sqlx/runtime-tokio-rustls"]
+
+[dependencies]
+futures-executor = "0.3.15"
+sqlx = { version = "0.5.2", default-features = false, features = ["migrate"] }
+
+[dev-dependencies]
+anyhow = "1.0.40"
+dotenv = "0.15.0"
+serial_test = "0.5.1"
+sqlx = { version = "0.5.2", features = ["postgres"] }
+sqlx-rt = "0.5.2"
