@@ -1,6 +1,10 @@
 name: Rust
 
-on: [push, pull_request]
+on:
+  pull_request:
+  push:
+    branches:
+    - main
 
 jobs:
   fmt:
@@ -33,6 +37,9 @@ jobs:
         toolchain: stable
         override: true
     - run: rustup component add clippy
+    - uses: actions-rs/cargo@v1
+      with:
+        command: generate-lockfile
     - uses: actions/cache@v2
       with:
         path: |
@@ -40,6 +47,7 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-check-${{ matrix.runtime }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-check-${{ matrix.runtime }}-
     - uses: actions-rs/cargo@v1
       with:
         command: clippy
@@ -51,8 +59,20 @@ jobs:
     strategy:
       matrix:
         runtime: [async-std-native-tls, tokio-native-tls, actix-native-tls, async-std-rustls, tokio-rustls, actix-rustls]
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+        - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: postgres://postgres@localhost:5432/postgres
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
@@ -60,6 +80,9 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+    - uses: actions-rs/cargo@v1
+      with:
+        command: generate-lockfile
     - uses: actions/cache@v2
       with:
         path: |
@@ -67,8 +90,7 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-test-${{ hashFiles('**/Cargo.lock') }}
-    - run: docker run --rm -d -p 5432:5432 postgres:12-alpine
-    - run: sleep 10
+        restore-keys: ${{ runner.os }}-test-
     - uses: actions-rs/cargo@v1
       with:
         command: test
@@ -88,6 +110,9 @@ jobs:
         toolchain: stable
         override: true
     - run: rustup component add clippy
+    - uses: actions-rs/cargo@v1
+      with:
+        command: generate-lockfile
     - uses: actions/cache@v2
       with:
         path: |
@@ -95,10 +120,11 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-check-tide-${{ matrix.runtime }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: ${{ runner.os }}-check-tide-${{ matrix.runtime }}-
     - uses: actions-rs/cargo@v1
       with:
         command: clippy
-        args: --package tide-sqlx-test-connection --features runtime-${{ matrix.runtime }}
+        args: --manifest-path tide-sqlx-test-connection/Cargo.toml --features ${{ matrix.runtime }}
 
   test-tide:
     name: Test tide extension
@@ -106,8 +132,20 @@ jobs:
     strategy:
       matrix:
         runtime: [native-tls, rustls]
+    services:
+      postgres:
+        image: postgres:12-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+        - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
-      DATABASE_URL: postgres://postgres@localhost:5432/postgres
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
@@ -115,6 +153,9 @@ jobs:
         profile: minimal
         toolchain: stable
         override: true
+    - uses: actions-rs/cargo@v1
+      with:
+        command: generate-lockfile
     - uses: actions/cache@v2
       with:
         path: |
@@ -122,9 +163,8 @@ jobs:
           ~/.cargo/git
           target
         key: ${{ runner.os }}-test-tide-${{ hashFiles('**/Cargo.lock') }}
-    - run: docker run --rm -d -p 5432:5432 postgres:12-alpine
-    - run: sleep 10
+        restore-keys: ${{ runner.os }}-test-tide-
     - uses: actions-rs/cargo@v1
       with:
         command: test
-        args: --package tide-sqlx-test-connection --features runtime-${{ matrix.runtime }}
+        args: --manifest-path tide-sqlx-test-connection/Cargo.toml --features ${{ matrix.runtime }}
