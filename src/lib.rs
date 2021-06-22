@@ -1,133 +1,56 @@
 use std::ops::{Deref, DerefMut};
 
 use futures_executor::block_on;
-use sqlx::migrate::{Migrate, Migration};
-use sqlx::{Connection, Database, Executor, Transaction};
+use sqlx_core::connection::Connection;
+use sqlx_core::migrate::{MigrateError, Migrator};
+use sqlx_core::postgres::{PgConnection, Postgres};
+use sqlx_core::transaction::Transaction;
 
-enum ConnectionOrTransaction<DB>
-where
-    DB: Database,
-{
-    Connection(DB::Connection),
-    Transaction(Transaction<'static, DB>),
-    Dropped,
-}
+pub struct TestConnection(Option<Transaction<'static, Postgres>>);
 
-pub struct TestConnection<DB>
-where
-    DB: Database,
-    DB::Connection: Migrate,
-    for<'c> &'c mut DB::Connection: Executor<'c, Database = DB>,
-{
-    inner: ConnectionOrTransaction<DB>,
-    migrations: Vec<Migration>,
-}
+impl Deref for TestConnection {
+    type Target = Transaction<'static, Postgres>;
 
-impl<DB> TestConnection<DB>
-where
-    DB: Database,
-    DB::Connection: Migrate,
-    for<'c> &'c mut DB::Connection: Executor<'c, Database = DB>,
-{
-    pub async fn new(
-        mut connection: DB::Connection,
-        migrations: Vec<Migration>,
-        within_transaction: bool,
-    ) -> Result<Self, sqlx::Error> {
-        macro_rules! run_migration {
-            ($conn:expr) => {
-                $conn.ensure_migrations_table().await?;
-                for migration in migrations.iter() {
-                    if migration.migration_type.is_down_migration() {
-                        continue;
-                    }
-                    $conn.apply(migration).await?;
-                }
-            };
-        }
-        let inner = if within_transaction {
-            let connection = Box::new(connection);
-            let connection = Box::leak(connection);
-            let mut transaction = connection.begin().await?;
-            run_migration!(transaction);
-            ConnectionOrTransaction::Transaction(transaction)
-        } else {
-            run_migration!(connection);
-            ConnectionOrTransaction::Connection(connection)
-        };
-        Ok(Self { inner, migrations })
-    }
-}
-
-impl<DB> Drop for TestConnection<DB>
-where
-    DB: Database,
-    DB::Connection: Migrate,
-    for<'c> &'c mut DB::Connection: Executor<'c, Database = DB>,
-{
-    fn drop(&mut self) {
-        let inner = std::mem::replace(&mut self.inner, ConnectionOrTransaction::Dropped);
-        match inner {
-            ConnectionOrTransaction::Connection(mut connection) => {
-                let migrations = self.migrations.iter().rev();
-                let fut = async move {
-                    for migration in migrations {
-                        if !migration.migration_type.is_down_migration() {
-                            continue;
-                        }
-                        connection.revert(migration).await.unwrap();
-                    }
-                    connection
-                        .execute("DROP TABLE IF EXISTS _sqlx_migrations")
-                        .await
-                        .unwrap();
-                    connection.close().await.unwrap();
-                };
-                block_on(fut);
-            }
-            ConnectionOrTransaction::Transaction(mut transaction) => {
-                let connection = unsafe { Box::from_raw(transaction.deref_mut()) };
-                let fut = async move {
-                    transaction.rollback().await.unwrap();
-                    connection.close().await.unwrap();
-                };
-                block_on(fut);
-            }
-            ConnectionOrTransaction::Dropped => panic!(),
-        }
-    }
-}
-
-impl<DB> Deref for TestConnection<DB>
-where
-    DB: Database,
-    DB::Connection: Migrate,
-    for<'c> &'c mut DB::Connection: Executor<'c, Database = DB>,
-{
-    type Target = DB::Connection;
-
-    #[inline]
     fn deref(&self) -> &Self::Target {
-        match &self.inner {
-            ConnectionOrTransaction::Connection(conn) => conn,
-            ConnectionOrTransaction::Transaction(trans) => &*trans,
-            ConnectionOrTransaction::Dropped => panic!(),
-        }
+        self.0.as_ref().unwrap()
     }
 }
 
-impl<DB> DerefMut for TestConnection<DB>
-where
-    DB: Database,
-    DB::Connection: Migrate,
-    for<'c> &'c mut DB::Connection: Executor<'c, Database = DB>,
-{
-    #[inline]
+impl DerefMut for TestConnection {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        match &mut self.inner {
-            ConnectionOrTransaction::Connection(conn) => conn,
-            ConnectionOrTransaction::Transaction(trans) => &mut *trans,
-            ConnectionOrTransaction::Dropped => panic!(),
+        self.0.as_mut().unwrap()
+    }
+}
+
+impl TestConnection {
+    pub async fn new(connection: PgConnection, migrator: &Migrator) -> Result<Self, MigrateError> {
+        let connection = Box::new(connection);
+        let connection = Box::leak(connection);
+        let transaction = connection.begin().await?;
+        let mut transaction = Self(Some(transaction));
+        let migrate_res = migrator.run(transaction.deref_mut()).await;
+        match migrate_res {
+            Ok(_) => Ok(transaction),
+            Err(e) => {
+                transaction.async_drop().await;
+                Err(e)
+            }
         }
+    }
+
+    async fn async_drop(&mut self) {
+        if self.0.is_none() {
+            return;
+        }
+        let mut transaction = self.0.take().unwrap();
+        let connection = unsafe { Box::from_raw(transaction.deref_mut()) };
+        transaction.rollback().await.ok();
+        connection.close().await.ok();
+    }
+}
+
+impl Drop for TestConnection {
+    fn drop(&mut self) {
+        block_on(self.async_drop());
     }
 }

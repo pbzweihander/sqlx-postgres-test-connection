@@ -1,7 +1,9 @@
-# sqlx-test-connection
+# sqlx-postgres-test-connection
 
-Database test helper for sqlx. Inspired by https://github.com/spoqa/ormeasy
+Postgres database test helper for sqlx. Inspired by https://github.com/spoqa/ormeasy
+
+With the transactional DDL feature of PostgreSQL, `TestConnection` creates a transaction, runs migrations, and rollbacks on drop.
 
 ## License
 
-`sqlx-test-connection` is licensed under the MIT license. Please read [LICENSE](LICENSE) for more information.
+`sqlx-postgres-test-connection` is licensed under the MIT license. Please read [LICENSE](LICENSE) for more information.

@@ -1,33 +1,46 @@
-[workspace]
-members = [".", "tide-sqlx-test-connection"]
-
 [package]
-name = "sqlx-test-connection"
-description = "Database test helper for sqlx. Inspired by https://github.com/spoqa/ormeasy"
+name = "sqlx-postgres-test-connection"
+description = "Postgres test helper connection for sqlx. Inspired by https://github.com/spoqa/ormeasy"
 version = "0.1.0"
 authors = ["Spoqa Creators <dev@spoqa.com>"]
 edition = "2018"
-homepage = "https://github.com/spoqa/sqlx-test-connection"
-repository = "https://github.com/spoqa/sqlx-test-connection"
+homepage = "https://github.com/spoqa/sqlx-postgres-test-connection"
+repository = "https://github.com/spoqa/sqlx-postgres-test-connection"
 readme = "README.md"
 license = "MIT"
 
 [features]
-runtime-actix-native-tls = ["sqlx/runtime-actix-native-tls"]
-runtime-async-std-native-tls = ["sqlx/runtime-async-std-native-tls"]
-runtime-tokio-native-tls = ["sqlx/runtime-tokio-native-tls"]
+runtime-async-std-native-tls = [
+    "sqlx-core/runtime-async-std-native-tls",
+    "sqlx-rt/runtime-async-std-native-tls",
+    "_async-std",
+]
+runtime-tokio-native-tls = [
+    "sqlx-core/runtime-tokio-native-tls",
+    "sqlx-rt/runtime-tokio-native-tls",
+    "_tokio",
+]
 
-runtime-actix-rustls = ["sqlx/runtime-actix-rustls"]
-runtime-async-std-rustls = ["sqlx/runtime-async-std-rustls"]
-runtime-tokio-rustls = ["sqlx/runtime-tokio-rustls"]
+runtime-async-std-rustls = [
+    "sqlx-core/runtime-async-std-rustls",
+    "sqlx-rt/runtime-async-std-rustls",
+    "_async-std",
+]
+runtime-tokio-rustls = [
+    "sqlx-core/runtime-tokio-rustls",
+    "sqlx-rt/runtime-tokio-rustls",
+    "_tokio",
+]
+
+_async-std = []
+_tokio = []
 
 [dependencies]
 futures-executor = "0.3.15"
-sqlx = { version = "0.5.2", default-features = false, features = ["migrate"] }
+sqlx-core = { version = "0.5.5", default-features = false, features = ["migrate", "postgres"] }
+sqlx-rt = "0.5.5"
 
 [dev-dependencies]
-anyhow = "1.0.40"
+anyhow = "1.0.41"
 dotenv = "0.15.0"
-serial_test = "0.5.1"
-sqlx = { version = "0.5.2", features = ["postgres"] }
-sqlx-rt = "0.5.2"
+sqlx-macros = { version = "0.5.5", default-features = false, features = ["migrate"] }
