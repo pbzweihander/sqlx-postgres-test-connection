@@ -2,10 +2,10 @@
 name = "sqlx-postgres-test-connection"
 description = "Postgres test helper connection for sqlx. Inspired by https://github.com/spoqa/ormeasy"
 version = "0.1.0"
-authors = ["Spoqa Creators <dev@spoqa.com>"]
+authors = ["Kangwook Lee <pbzweihander@gmail.com>"]
 edition = "2018"
-homepage = "https://github.com/spoqa/sqlx-postgres-test-connection"
-repository = "https://github.com/spoqa/sqlx-postgres-test-connection"
+homepage = "https://github.com/pbzweihander/sqlx-postgres-test-connection"
+repository = "https://github.com/pbzweihander/sqlx-postgres-test-connection"
 readme = "README.md"
 license = "MIT"
 

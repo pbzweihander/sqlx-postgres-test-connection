@@ -2,7 +2,7 @@
 
 Postgres database test helper for sqlx. Inspired by https://github.com/spoqa/ormeasy
 
-With the transactional DDL feature of PostgreSQL, `TestConnection` creates a transaction, runs migrations, and rollbacks on drop.
+With the transactional DDL feature of PostgreSQL, `TestConnection` creates a transaction, runs migrations, and rollbacks on close.
 
 ## License
 
