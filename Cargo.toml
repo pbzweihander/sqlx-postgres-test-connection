@@ -18,6 +18,10 @@ runtime-tokio-native-tls = [
     "sqlx-core/runtime-tokio-native-tls",
     "sqlx-rt/runtime-tokio-native-tls",
 ]
+runtime-actix-native-tls = [
+    "sqlx-core/runtime-actix-native-tls",
+    "sqlx-rt/runtime-actix-native-tls",
+]
 
 runtime-async-std-rustls = [
     "sqlx-core/runtime-async-std-rustls",
@@ -26,6 +30,10 @@ runtime-async-std-rustls = [
 runtime-tokio-rustls = [
     "sqlx-core/runtime-tokio-rustls",
     "sqlx-rt/runtime-tokio-rustls",
+]
+runtime-actix-rustls = [
+    "sqlx-core/runtime-actix-rustls",
+    "sqlx-rt/runtime-actix-rustls",
 ]
 
 [dependencies]

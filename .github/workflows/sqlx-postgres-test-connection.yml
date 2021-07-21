@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        runtime: [async-std-native-tls, tokio-native-tls, async-std-rustls, tokio-rustls]
+        runtime: [async-std-native-tls, tokio-native-tls, actix-native-tls, async-std-rustls, tokio-rustls, actix-rustls]
     steps:
     - uses: actions/checkout@v2
     - uses: actions-rs/toolchain@v1
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        runtime: [async-std-native-tls, tokio-native-tls, async-std-rustls, tokio-rustls]
+        runtime: [async-std-native-tls, tokio-native-tls, actix-native-tls, async-std-rustls, tokio-rustls, actix-rustls]
     services:
       postgres:
         image: postgres:12-alpine
