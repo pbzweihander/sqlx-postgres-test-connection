@@ -1,5 +1,6 @@
 extern crate sqlx_core as sqlx;
 
+use futures_util::future::try_join_all;
 use sqlx_core::connection::Connection;
 use sqlx_core::migrate::Migrator;
 use sqlx_core::postgres::PgConnection;
@@ -75,5 +76,11 @@ async fn async_migration_test(with_close: bool) -> anyhow::Result<()> {
 fn migration_test() -> anyhow::Result<()> {
     sqlx_rt::block_on(async_migration_test(true))?;
     sqlx_rt::block_on(async_migration_test(false))?;
+    Ok(())
+}
+
+#[test]
+fn migration_stress_test() -> anyhow::Result<()> {
+    sqlx_rt::block_on(try_join_all((0..100).map(|_| async_migration_test(true))))?;
     Ok(())
 }
