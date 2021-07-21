@@ -81,6 +81,6 @@ fn migration_test() -> anyhow::Result<()> {
 
 #[test]
 fn migration_stress_test() -> anyhow::Result<()> {
-    sqlx_rt::block_on(try_join_all((0..100).map(|_| async_migration_test(true))))?;
+    sqlx_rt::block_on(try_join_all((0..90).map(|_| async_migration_test(true))))?;
     Ok(())
 }
