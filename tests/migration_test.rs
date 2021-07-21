@@ -6,7 +6,7 @@ use sqlx_core::postgres::PgConnection;
 use sqlx_core::query::query;
 use sqlx_core::query_scalar::query_scalar;
 
-use sqlx_test_connection::TestConnection;
+use sqlx_postgres_test_connection::TestConnection;
 
 static MIGRATOR: Migrator = sqlx_macros::migrate!("./tests/migrations");
 
@@ -58,19 +58,7 @@ async fn async_migration_test() -> anyhow::Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "_tokio")]
 #[test]
 fn migration_test() -> anyhow::Result<()> {
-    sqlx_rt::tokio::runtime::Builder::new_multi_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap()
-        .block_on(async_migration_test())
-}
-
-#[cfg(feature = "_async-std")]
-#[test]
-fn migration_test() -> anyhow::Result<()> {
-    sqlx_rt::async_std::task::block_on(async_migration_test())
+    sqlx_rt::block_on(async_migration_test())
 }
