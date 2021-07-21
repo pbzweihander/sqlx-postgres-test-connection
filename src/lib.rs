@@ -1,6 +1,5 @@
 use std::ops::{Deref, DerefMut};
 
-use futures_executor::block_on;
 use sqlx_core::connection::Connection;
 use sqlx_core::migrate::{MigrateError, Migrator};
 use sqlx_core::postgres::{PgConnection, Postgres};
@@ -32,25 +31,35 @@ impl TestConnection {
         match migrate_res {
             Ok(_) => Ok(transaction),
             Err(e) => {
-                transaction.async_drop().await;
+                let _ = transaction.close().await;
                 Err(e)
             }
         }
     }
 
-    async fn async_drop(&mut self) {
-        if self.0.is_none() {
-            return;
+    pub async fn close(mut self) -> Result<(), sqlx_core::error::Error> {
+        if let Some((transaction, connection)) = self.take_inner() {
+            transaction.rollback().await?;
+            connection.close().await?;
         }
-        let mut transaction = self.0.take().unwrap();
-        let connection = unsafe { Box::from_raw(transaction.deref_mut()) };
-        transaction.rollback().await.ok();
-        connection.close().await.ok();
+        Ok(())
+    }
+
+    fn take_inner(&mut self) -> Option<(Transaction<'static, Postgres>, Box<PgConnection>)> {
+        if let Some(mut transaction) = self.0.take() {
+            let connection = unsafe { Box::from_raw(transaction.deref_mut()) };
+            Some((transaction, connection))
+        } else {
+            None
+        }
     }
 }
 
 impl Drop for TestConnection {
     fn drop(&mut self) {
-        block_on(self.async_drop());
+        if let Some((transaction, connection)) = self.take_inner() {
+            drop(transaction);
+            drop(connection);
+        }
     }
 }

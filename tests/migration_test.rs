@@ -10,10 +10,24 @@ use sqlx_postgres_test_connection::TestConnection;
 
 static MIGRATOR: Migrator = sqlx_macros::migrate!("./tests/migrations");
 
-async fn async_migration_test() -> anyhow::Result<()> {
+async fn assert_table_empty(db_url: &str) -> anyhow::Result<()> {
+    let mut connection = PgConnection::connect(&db_url).await?;
+    let table_names: Vec<String> =
+        query_scalar("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'")
+            .fetch_all(&mut connection)
+            .await?;
+    assert!(table_names.is_empty());
+    connection.close().await?;
+    Ok(())
+}
+
+async fn async_migration_test(with_close: bool) -> anyhow::Result<()> {
     dotenv::dotenv().ok();
 
     let db_url = std::env::var("DATABASE_URL")?;
+
+    assert_table_empty(&db_url).await?;
+
     let connection = PgConnection::connect(&db_url).await?;
     let mut test_connection = TestConnection::new(connection, &MIGRATOR).await?;
 
@@ -46,19 +60,20 @@ async fn async_migration_test() -> anyhow::Result<()> {
         .await?;
     assert_eq!(query_resp, "na");
 
-    drop(test_connection);
+    if with_close {
+        test_connection.close().await?;
+    } else {
+        drop(test_connection);
+    }
 
-    let mut connection = PgConnection::connect(&db_url).await?;
-    let table_names: Vec<String> =
-        query_scalar("SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public'")
-            .fetch_all(&mut connection)
-            .await?;
-    assert!(table_names.is_empty());
+    assert_table_empty(&db_url).await?;
 
     Ok(())
 }
 
 #[test]
 fn migration_test() -> anyhow::Result<()> {
-    sqlx_rt::block_on(async_migration_test())
+    sqlx_rt::block_on(async_migration_test(true))?;
+    sqlx_rt::block_on(async_migration_test(false))?;
+    Ok(())
 }
